@@ -1,3 +1,4 @@
+cargo-features = ["edition2024"]
 [package]
 name = "Helpdesk"
 version = "1.2.5"
