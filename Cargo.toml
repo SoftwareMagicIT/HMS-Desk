@@ -1,4 +1,3 @@
-cargo-features = ["edition2024"]
 [package]
 name = "Helpdesk"
 version = "1.2.5"
@@ -18,6 +17,7 @@ name = "naming"
 path = "src/naming.rs"
 
 [features]
+cargo-features = ["edition2024"]
 inline = []
 cli = []
 flutter_texture_render = []
