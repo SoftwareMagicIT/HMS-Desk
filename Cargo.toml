@@ -17,7 +17,6 @@ name = "naming"
 path = "src/naming.rs"
 
 [features]
-cargo-features = ["edition2024"]
 inline = []
 cli = []
 flutter_texture_render = []
