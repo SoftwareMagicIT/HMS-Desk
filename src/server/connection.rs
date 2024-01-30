@@ -578,6 +578,9 @@ impl Connection {
                                     if !conn.on_message(msg_in).await {
                                         break;
                                     }
+                                    if conn.port_forward_socket.is_some() && conn.authorized {
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -1033,10 +1036,11 @@ impl Connection {
         if self.authorized {
             return;
         }
-        if self.require_2fa.is_some() && !self.is_recent_session(true) {
+        if self.require_2fa.is_some() && !self.is_recent_session(true) && !self.from_switch {
             self.send_login_error(crate::client::REQUIRE_2FA).await;
             return;
         }
+        self.authorized = true;
         let (conn_type, auth_conn_type) = if self.file_transfer.is_some() {
             (1, AuthConnType::FileTransfer)
         } else if self.port_forward_socket.is_some() {
@@ -1170,7 +1174,6 @@ impl Connection {
                 username = "".to_owned();
             }
         }
-        self.authorized = true;
         #[cfg(all(feature = "flutter", feature = "plugin_framework"))]
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         PLUGIN_BLOCK_INPUT_TXS
@@ -1625,11 +1628,8 @@ impl Connection {
                     #[cfg(all(target_os = "linux", feature = "linux_headless"))]
                     #[cfg(not(any(feature = "flatpak", feature = "appimage")))]
                     self.linux_headless_handle.wait_desktop_cm_ready().await;
-                    self.try_start_cm(lr.my_id.clone(), lr.my_name.clone(), true);
                     self.send_logon_response().await;
-                    if self.port_forward_socket.is_some() {
-                        return false;
-                    }
+                    self.try_start_cm(lr.my_id.clone(), lr.my_name.clone(), self.authorized);
                 } else {
                     self.send_login_error(err_msg).await;
                 }
@@ -1666,10 +1666,7 @@ impl Connection {
                         #[cfg(not(any(feature = "flatpak", feature = "appimage")))]
                         self.linux_headless_handle.wait_desktop_cm_ready().await;
                         self.send_logon_response().await;
-                        self.try_start_cm(lr.my_id, lr.my_name, true);
-                        if self.port_forward_socket.is_some() {
-                            return false;
-                        }
+                        self.try_start_cm(lr.my_id, lr.my_name, self.authorized);
                     } else {
                         self.send_login_error(err_msg).await;
                     }
@@ -1686,6 +1683,11 @@ impl Connection {
                         self.update_failure(failure, true, 1);
                         self.require_2fa.take();
                         self.send_logon_response().await;
+                        self.try_start_cm(
+                            self.lr.my_id.to_owned(),
+                            self.lr.my_name.to_owned(),
+                            self.authorized,
+                        );
                         let session = SESSIONS
                             .lock()
                             .unwrap()
@@ -1746,8 +1748,12 @@ impl Connection {
                     if let Some((_instant, uuid_old)) = uuid_old {
                         if uuid == uuid_old {
                             self.from_switch = true;
-                            self.try_start_cm(lr.my_id.clone(), lr.my_name.clone(), true);
                             self.send_logon_response().await;
+                            self.try_start_cm(
+                                lr.my_id.clone(),
+                                lr.my_name.clone(),
+                                self.authorized,
+                            );
                             #[cfg(not(any(target_os = "android", target_os = "ios")))]
                             self.try_start_cm_ipc();
                         }
