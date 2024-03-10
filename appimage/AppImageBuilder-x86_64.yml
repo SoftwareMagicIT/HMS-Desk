@@ -2,7 +2,7 @@
 version: 1
 script:
  - rm -rf ./AppDir || true
- - bsdtar -zxvf ../helpdesk-1.2.4.deb
+ - bsdtar -zxvf ../rustdesk-1.2.4.deb
  - tar -xvf ./data.tar.xz
  - mkdir ./AppDir
  - mv ./usr ./AppDir/usr
@@ -15,11 +15,11 @@ script:
 AppDir:
   path: ./AppDir
   app_info:
-    id: helpdesk
-    name: helpdesk
+    id: rustdesk
+    name: rustdesk
     icon: rustdesk
     version: 1.2.4
-    exec: usr/lib/helpdesk/helpdesk
+    exec: usr/lib/rustdesk/rustdesk
     exec_args: $@
   apt:
     arch:
